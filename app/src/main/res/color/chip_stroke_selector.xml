@@ -1,0 +1,5 @@
+<!-- res/color/chip_stroke_selector.xml -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#BB86FC" android:state_checked="true" />
+    <item android:color="#2C2C2C" />
+</selector>

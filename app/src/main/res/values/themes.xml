@@ -1,0 +1,30 @@
+<!-- res/values/themes.xml -->
+<resources>
+
+    <style name="Theme.PrepTalk" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#BB86FC</item>
+        <item name="colorPrimaryVariant">#9B66DC</item>
+        <item name="colorOnPrimary">#1A0A2E</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="android:windowBackground">#121212</item>
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#121212</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Role Chip style -->
+    <style name="RoleChip" parent="Widget.MaterialComponents.Chip.Choice">
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="chipBackgroundColor">@color/chip_bg_selector</item>
+        <item name="chipStrokeColor">@color/chip_stroke_selector</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="android:textColor">@color/chip_text_selector</item>
+        <item name="android:textSize">14sp</item>
+        <item name="chipCornerRadius">20dp</item>
+        <item name="chipMinHeight">38dp</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="checkedIconVisible">false</item>
+    </style>
+
+</resources>
