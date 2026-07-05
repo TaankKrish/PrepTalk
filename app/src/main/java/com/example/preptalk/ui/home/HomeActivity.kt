@@ -2,6 +2,7 @@ package com.example.preptalk.ui.home
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.preptalk.R
 import com.example.preptalk.databinding.ActivityHomeBinding
@@ -22,6 +23,20 @@ class HomeActivity : AppCompatActivity() {
         setupDifficultyCards()
         setupStartButton()
         setupBottomNav()
+
+        if (intent.getBooleanExtra("HIGHLIGHT_ROLES", false)) {
+            highlightRoleSection()
+        }
+    }
+
+    private fun highlightRoleSection() {
+        val chipGroup = binding.chipGroupRoles
+        val pulseAnimation = android.view.animation.AlphaAnimation(1f, 0.3f).apply {
+            duration = 400
+            repeatMode = android.view.animation.Animation.REVERSE
+            repeatCount = 3
+        }
+        chipGroup.startAnimation(pulseAnimation)
     }
 
     private fun setupDifficultyCards() {
@@ -78,10 +93,21 @@ class HomeActivity : AppCompatActivity() {
         binding.bottomNav.selectedItemId = R.id.nav_home
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_home    -> true
-                R.id.nav_history -> {
+                R.id.nav_home      -> true
+                R.id.nav_history   -> {
                     startActivity(Intent(this, HistoryActivity::class.java))
                     true
+                }
+                R.id.nav_interviews -> {
+                    val intent = Intent(this, ChatActivity::class.java)
+                    intent.putExtra("ROLE", getSelectedRole())
+                    intent.putExtra("DIFFICULTY", selectedDifficulty)
+                    startActivity(intent)
+                    false
+                }
+                R.id.nav_settings -> {
+                    Toast.makeText(this, "Coming soon!", Toast.LENGTH_SHORT).show()
+                    false
                 }
                 else -> false
             }

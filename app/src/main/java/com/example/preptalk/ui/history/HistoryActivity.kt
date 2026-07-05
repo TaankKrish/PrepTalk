@@ -6,6 +6,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.preptalk.databinding.ActivityHistoryBinding
 import com.example.preptalk.ui.home.HomeActivity
+import android.widget.Toast
+import com.example.preptalk.R
 
 class HistoryActivity : AppCompatActivity() {
 
@@ -18,6 +20,7 @@ class HistoryActivity : AppCompatActivity() {
 
         loadSessions()
         setupStartButton()
+        setupBottomNav()
     }
 
     private fun loadSessions() {
@@ -42,6 +45,31 @@ class HistoryActivity : AppCompatActivity() {
     private fun setupStartButton() {
         binding.btnStartInterview.setOnClickListener {
             startActivity(Intent(this, HomeActivity::class.java))
+        }
+    }
+
+    private fun setupBottomNav() {
+        binding.bottomNav.selectedItemId = R.id.nav_history
+        binding.bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    startActivity(Intent(this, HomeActivity::class.java))
+                    true
+                }
+                R.id.nav_history -> true
+                R.id.nav_interviews -> {
+                    val intent = Intent(this, HomeActivity::class.java)
+                    intent.putExtra("HIGHLIGHT_ROLES", true)
+                    startActivity(intent)
+                    Toast.makeText(this, "Please select a role to start", Toast.LENGTH_SHORT).show()
+                    false
+                }
+                R.id.nav_settings -> {
+                    Toast.makeText(this, "Coming soon!", Toast.LENGTH_SHORT).show()
+                    false
+                }
+                else -> false
+            }
         }
     }
 }
