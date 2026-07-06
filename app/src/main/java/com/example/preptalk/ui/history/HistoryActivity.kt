@@ -2,43 +2,61 @@ package com.example.preptalk.ui.history
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.preptalk.databinding.ActivityHistoryBinding
-import com.example.preptalk.ui.home.HomeActivity
+import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.preptalk.R
+import com.example.preptalk.databinding.ActivityHistoryBinding
+import com.example.preptalk.repository.SessionRepository
+import com.example.preptalk.ui.home.HomeActivity
+import kotlinx.coroutines.launch
 
 class HistoryActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHistoryBinding
+    private lateinit var sessionRepository: SessionRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHistoryBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        sessionRepository = SessionRepository(applicationContext)
+
         loadSessions()
         setupStartButton()
         setupBottomNav()
     }
 
-    private fun loadSessions() {
-        // Placeholder data — will be replaced with Room DB after integration
-        val sessions = listOf(
-            SessionSummary("Android", "Mid",    "Oct 24, 2023", 85),
-            SessionSummary("Frontend", "Senior", "Oct 20, 2023", 92),
-            SessionSummary("Backend",  "Fresher","Oct 15, 2023", 64)
-        )
+    override fun onResume() {
+        super.onResume()
+        loadSessions()  // Refresh whenever screen becomes visible
+    }
 
-        if (sessions.isEmpty()) {
-            binding.layoutEmptyState.visibility = android.view.View.VISIBLE
-            binding.rvHistory.visibility        = android.view.View.GONE
-        } else {
-            binding.layoutEmptyState.visibility = android.view.View.GONE
-            binding.rvHistory.visibility        = android.view.View.VISIBLE
-            binding.rvHistory.layoutManager     = LinearLayoutManager(this)
-            binding.rvHistory.adapter           = HistoryAdapter(sessions)
+    private fun loadSessions() {
+        lifecycleScope.launch {
+            val sessionEntities = sessionRepository.getAllSessions()
+
+            val sessions = sessionEntities.map { entity ->
+                SessionSummary(
+                    role       = entity.role,
+                    difficulty = entity.difficulty,
+                    date       = entity.date,
+                    score      = entity.score
+                )
+            }
+
+            if (sessions.isEmpty()) {
+                binding.layoutEmptyState.visibility = View.VISIBLE
+                binding.rvHistory.visibility        = View.GONE
+            } else {
+                binding.layoutEmptyState.visibility = View.GONE
+                binding.rvHistory.visibility        = View.VISIBLE
+                binding.rvHistory.layoutManager     = LinearLayoutManager(this@HistoryActivity)
+                binding.rvHistory.adapter           = HistoryAdapter(sessions)
+            }
         }
     }
 
