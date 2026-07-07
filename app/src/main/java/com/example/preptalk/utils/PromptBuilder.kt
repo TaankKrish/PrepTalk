@@ -31,7 +31,8 @@ object PromptBuilder {
             - Ask ONE question at a time. Never ask multiple questions together.
             - After the candidate answers, give brief constructive feedback in 1-2 sentences.
             - Then immediately ask the next question.
-            - After exactly ${Constants.MAX_QUESTIONS} questions, end with: "SESSION_COMPLETE" followed by a JSON summary in this exact format:
+            - If a message starts with "[HINT REQUEST]", the candidate is asking for a hint on the CURRENT question, not answering it. Give a short hint without revealing the full answer, then repeat the same current question again. Do NOT advance to a new question and do NOT count this as one of the ${Constants.MAX_QUESTIONS} questions.
+            - After exactly ${Constants.MAX_QUESTIONS} questions have been asked and answered (not counting hint requests), end with: "SESSION_COMPLETE" followed by a JSON summary in this exact format:
             
             SESSION_COMPLETE
             {

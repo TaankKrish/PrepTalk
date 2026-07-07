@@ -1,120 +1,122 @@
-package com.example.preptalk.ui.chat
+package com.example.preptalk.viewmodel
 
-import android.content.Intent
-import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.preptalk.databinding.ActivityChatBinding
-import com.example.preptalk.ui.summary.SummaryActivity
-import com.example.preptalk.viewmodel.ChatViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.preptalk.model.ApiMessage
+import com.example.preptalk.model.Message
+import com.example.preptalk.model.MessageRole
+import com.example.preptalk.repository.ChatRepository
+import com.example.preptalk.utils.PromptBuilder
+import kotlinx.coroutines.launch
 
-class ChatActivity : AppCompatActivity() {
+class ChatViewModel : ViewModel() {
 
-    private lateinit var binding: ActivityChatBinding
-    private lateinit var chatAdapter: ChatAdapter
-    private val viewModel: ChatViewModel by viewModels()
+    private val repository = ChatRepository()
+
+    private val _messages = MutableLiveData<List<Message>>(emptyList())
+    val messages: LiveData<List<Message>> = _messages
+
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    private val _sessionComplete = MutableLiveData<Int?>()
+    val sessionComplete: LiveData<Int?> = _sessionComplete
+
+    private val _sessionFeedbackJson = MutableLiveData<String>()
+    val sessionFeedbackJson: LiveData<String> = _sessionFeedbackJson
+
+    private val _error = MutableLiveData<String?>()
+    val error: LiveData<String?> = _error
+
+    private val conversationHistory = mutableListOf<ApiMessage>()
 
     private var role       = "Android"
     private var difficulty = "Mid-level"
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityChatBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        role       = intent.getStringExtra("ROLE")       ?: "Android"
-        difficulty = intent.getStringExtra("DIFFICULTY") ?: "Mid-level"
-
-        binding.tvToolbarTitle.text = "$role Interview"
-
-        setupRecyclerView()
-        setupSendButton()
-        setupHint()
-        setupBackButton()
-        setupEndSession()
-        observeViewModel()
-
-        viewModel.init(role, difficulty)
+    fun init(role: String, difficulty: String) {
+        this.role       = role
+        this.difficulty = difficulty
+        sendToAi(isFirstMessage = true)
     }
 
-    private fun setupRecyclerView() {
-        chatAdapter = ChatAdapter()
-        binding.rvChat.apply {
-            adapter       = chatAdapter
-            layoutManager = LinearLayoutManager(this@ChatActivity).apply {
-                stackFromEnd = true
+    fun sendUserMessage(userInput: String) {
+        // Add user message to UI
+        addMessage(Message(content = userInput, role = MessageRole.USER))
+
+        // Add to conversation history for API
+        conversationHistory.add(
+            ApiMessage(role = "user", content = userInput)
+        )
+
+        sendToAi()
+    }
+
+    fun requestHint() {
+        // Show a friendly hint bubble in the UI, but tag the actual API message
+        // so the AI knows this isn't a real answer and shouldn't advance the question count
+        addMessage(Message(content = "Can you give me a hint?", role = MessageRole.USER))
+
+        conversationHistory.add(
+            ApiMessage(role = "user", content = "[HINT REQUEST] Can you give me a hint for the current question?")
+        )
+
+        sendToAi()
+    }
+
+    private fun sendToAi(isFirstMessage: Boolean = false) {
+        _isLoading.value = true
+
+        if (isFirstMessage) {
+            conversationHistory.add(
+                ApiMessage(role = "user", content = "Start the interview. Ask me the first question.")
+            )
+        }
+
+        viewModelScope.launch {
+            val result = repository.sendMessage(
+                role                = role,
+                difficulty          = difficulty,
+                conversationHistory = conversationHistory
+            )
+
+            result.onSuccess { responseText ->
+                conversationHistory.add(
+                    ApiMessage(role = "assistant", content = responseText)
+                )
+
+                if (PromptBuilder.isSessionComplete(responseText)) {
+                    val score = PromptBuilder.extractScore(responseText)
+                    val feedbackJson = PromptBuilder.extractFeedbackJson(responseText)
+                    _sessionFeedbackJson.value = feedbackJson
+                    _sessionComplete.value = score
+                } else {
+                    addMessage(Message(content = responseText, role = MessageRole.AI))
+                }
             }
-        }
-    }
 
-    private fun observeViewModel() {
-        viewModel.messages.observe(this) { messages ->
-            chatAdapter.setMessages(messages)
-            if (messages.isNotEmpty()) scrollToBottom()
-        }
-
-        viewModel.isLoading.observe(this) { isLoading ->
-            if (isLoading) {
-                chatAdapter.showTyping()
-                scrollToBottom()
-            } else {
-                chatAdapter.hideTyping()
+            result.onFailure { error ->
+                _error.value = "Connection error: ${error.message}"
+                addMessage(
+                    Message(
+                        content = "Sorry, I'm having trouble connecting. Please check your internet and try again.",
+                        role    = MessageRole.AI
+                    )
+                )
             }
-            binding.btnSend.isEnabled  = !isLoading
-            binding.etAnswer.isEnabled = !isLoading
-        }
 
-        viewModel.sessionComplete.observe(this) { score ->
-            score?.let {
-                val intent = Intent(this, SummaryActivity::class.java)
-                intent.putExtra("ROLE",          role)
-                intent.putExtra("DIFFICULTY",    difficulty)
-                intent.putExtra("SCORE",         it)
-                intent.putExtra("FEEDBACK_JSON", viewModel.sessionFeedbackJson.value ?: "{}")
-                startActivity(intent)
-                finish()
-            }
-        }
-
-        viewModel.error.observe(this) { error ->
-            error?.let {
-                Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
-            }
+            _isLoading.value = false
         }
     }
 
-    private fun setupSendButton() {
-        binding.btnSend.setOnClickListener { sendMessage() }
+    private fun addMessage(message: Message) {
+        val current = _messages.value.orEmpty().toMutableList()
+        current.add(message)
+        _messages.value = current
     }
 
-    private fun sendMessage() {
-        val text = binding.etAnswer.text?.toString()?.trim() ?: return
-        if (text.isEmpty()) return
-        binding.etAnswer.setText("")
-        viewModel.sendUserMessage(text)
-    }
-
-    private fun setupHint() {
-        binding.layoutHint.setOnClickListener {
-            viewModel.sendUserMessage("Can you give me a hint?")
-        }
-    }
-
-    private fun setupBackButton() {
-        binding.btnBack.setOnClickListener { finish() }
-    }
-
-    private fun setupEndSession() {
-        binding.tvEndSession.setOnClickListener {
-            finish()
-        }
-    }
-
-    private fun scrollToBottom() {
-        binding.rvChat.post {
-            binding.rvChat.smoothScrollToPosition(chatAdapter.itemCount - 1)
-        }
+    fun getConversationForSummary(): List<Message> {
+        return _messages.value.orEmpty()
     }
 }
