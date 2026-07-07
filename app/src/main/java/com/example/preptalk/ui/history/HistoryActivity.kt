@@ -11,6 +11,7 @@ import com.example.preptalk.R
 import com.example.preptalk.databinding.ActivityHistoryBinding
 import com.example.preptalk.repository.SessionRepository
 import com.example.preptalk.ui.home.HomeActivity
+import com.example.preptalk.ui.summary.SummaryActivity
 import kotlinx.coroutines.launch
 
 class HistoryActivity : AppCompatActivity() {
@@ -32,7 +33,7 @@ class HistoryActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadSessions()  // Refresh whenever screen becomes visible
+        loadSessions()
     }
 
     private fun loadSessions() {
@@ -41,6 +42,7 @@ class HistoryActivity : AppCompatActivity() {
 
             val sessions = sessionEntities.map { entity ->
                 SessionSummary(
+                    id         = entity.id,
                     role       = entity.role,
                     difficulty = entity.difficulty,
                     date       = entity.date,
@@ -55,9 +57,18 @@ class HistoryActivity : AppCompatActivity() {
                 binding.layoutEmptyState.visibility = View.GONE
                 binding.rvHistory.visibility        = View.VISIBLE
                 binding.rvHistory.layoutManager     = LinearLayoutManager(this@HistoryActivity)
-                binding.rvHistory.adapter           = HistoryAdapter(sessions)
+                binding.rvHistory.adapter           = HistoryAdapter(sessions) { clickedSession ->
+                    openSessionDetail(clickedSession.id)
+                }
             }
         }
+    }
+
+    private fun openSessionDetail(sessionId: Long) {
+        val intent = Intent(this, SummaryActivity::class.java)
+        intent.putExtra("SESSION_ID", sessionId)
+        intent.putExtra("VIEW_ONLY", true)
+        startActivity(intent)
     }
 
     private fun setupStartButton() {

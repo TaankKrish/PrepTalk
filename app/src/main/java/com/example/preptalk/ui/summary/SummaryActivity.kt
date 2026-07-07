@@ -3,6 +3,7 @@ package com.example.preptalk.ui.summary
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -29,9 +30,11 @@ class SummaryActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySummaryBinding
     private lateinit var sessionRepository: SessionRepository
 
-    private var role       = "Android"
-    private var difficulty = "Mid-level"
-    private var score      = 50
+    private var role         = "Android"
+    private var difficulty   = "Mid-level"
+    private var score        = 50
+    private var feedbackJson = "{}"
+    private var isViewOnly   = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,13 +43,42 @@ class SummaryActivity : AppCompatActivity() {
 
         sessionRepository = SessionRepository(applicationContext)
 
-        role       = intent.getStringExtra("ROLE")       ?: "Android"
-        difficulty = intent.getStringExtra("DIFFICULTY") ?: "Mid-level"
-        score      = intent.getIntExtra("SCORE", 50)
+        isViewOnly = intent.getBooleanExtra("VIEW_ONLY", false)
 
-        setupHeader(role, difficulty, score)
-        setupFeedbackCards()
-        setupButtons(role, difficulty)
+        if (isViewOnly) {
+            loadSessionFromDb()
+        } else {
+            role         = intent.getStringExtra("ROLE")       ?: "Android"
+            difficulty   = intent.getStringExtra("DIFFICULTY") ?: "Mid-level"
+            score        = intent.getIntExtra("SCORE", 50)
+            feedbackJson = intent.getStringExtra("FEEDBACK_JSON") ?: "{}"
+
+            setupHeader(role, difficulty, score)
+            setupFeedbackCards(feedbackJson)
+            setupButtons()
+        }
+    }
+
+    private fun loadSessionFromDb() {
+        val sessionId = intent.getLongExtra("SESSION_ID", -1L)
+
+        lifecycleScope.launch {
+            val session = sessionRepository.getSessionById(sessionId)
+
+            if (session != null) {
+                role         = session.role
+                difficulty   = session.difficulty
+                score        = session.score
+                feedbackJson = session.feedbackJson
+
+                setupHeader(role, difficulty, score)
+                setupFeedbackCards(feedbackJson)
+                setupButtons()
+            } else {
+                Toast.makeText(this@SummaryActivity, "Session not found", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        }
     }
 
     private fun setupHeader(role: String, difficulty: String, score: Int) {
@@ -55,9 +87,7 @@ class SummaryActivity : AppCompatActivity() {
         binding.progressScore.progress = score
     }
 
-    private fun setupFeedbackCards() {
-        val feedbackJsonRaw = intent.getStringExtra("FEEDBACK_JSON") ?: "{}"
-
+    private fun setupFeedbackCards(feedbackJsonRaw: String) {
         val feedbackItems: List<FeedbackItem> = try {
             val jsonObject = JsonParser.parseString(feedbackJsonRaw).asJsonObject
             val feedbackArray = jsonObject.getAsJsonArray("feedback")
@@ -89,22 +119,27 @@ class SummaryActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupButtons(role: String, difficulty: String) {
-        binding.btnSaveSession.setOnClickListener {
-            saveSessionToDb(role, difficulty)
-        }
-
-        binding.btnTryAgain.setOnClickListener {
-            goToHome()
+    private fun setupButtons() {
+        if (isViewOnly) {
+            // Already saved — hide Save button, repurpose Try Again as "Back"
+            binding.btnSaveSession.visibility = View.GONE
+            binding.btnTryAgain.text = "Back to History"
+            binding.btnTryAgain.setOnClickListener { finish() }
+        } else {
+            binding.btnSaveSession.setOnClickListener {
+                saveSessionToDb()
+            }
+            binding.btnTryAgain.setOnClickListener {
+                goToHome()
+            }
         }
 
         binding.btnClose.setOnClickListener { finish() }
     }
 
-    private fun saveSessionToDb(role: String, difficulty: String) {
+    private fun saveSessionToDb() {
         val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
-        val feedbackJson = intent.getStringExtra("FEEDBACK_JSON") ?: "{}"
 
         lifecycleScope.launch {
             sessionRepository.saveSession(

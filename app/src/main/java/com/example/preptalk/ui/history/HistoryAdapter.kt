@@ -9,6 +9,7 @@ import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.example.preptalk.R
 
 data class SessionSummary(
+    val id: Long,
     val role: String,
     val difficulty: String,
     val date: String,
@@ -16,7 +17,8 @@ data class SessionSummary(
 )
 
 class HistoryAdapter(
-    private val sessions: List<SessionSummary>
+    private val sessions: List<SessionSummary>,
+    private val onItemClick: (SessionSummary) -> Unit
 ) : RecyclerView.Adapter<HistoryAdapter.HistoryViewHolder>() {
 
     inner class HistoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -41,7 +43,6 @@ class HistoryAdapter(
         holder.tvScore.text      = "${session.score}%"
         holder.progressScore.progress = session.score
 
-        // Change accent color based on score
         val color = when {
             session.score >= 80 -> 0xFF00BCD4.toInt() // teal
             session.score >= 60 -> 0xFFBB86FC.toInt() // purple
@@ -50,6 +51,10 @@ class HistoryAdapter(
         holder.progressScore.setIndicatorColor(color)
         holder.itemView.findViewById<View>(R.id.viewAccent)
             .setBackgroundColor(color)
+
+        holder.itemView.setOnClickListener {
+            onItemClick(session)
+        }
     }
 
     override fun getItemCount() = sessions.size
