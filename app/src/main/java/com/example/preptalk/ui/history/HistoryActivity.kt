@@ -12,6 +12,7 @@ import com.example.preptalk.databinding.ActivityHistoryBinding
 import com.example.preptalk.repository.SessionRepository
 import com.example.preptalk.ui.home.HomeActivity
 import com.example.preptalk.ui.summary.SummaryActivity
+import com.example.preptalk.ui.settings.SettingsActivity
 import kotlinx.coroutines.launch
 
 class HistoryActivity : AppCompatActivity() {
@@ -94,8 +95,8 @@ class HistoryActivity : AppCompatActivity() {
                     false
                 }
                 R.id.nav_settings -> {
-                    Toast.makeText(this, "Coming soon!", Toast.LENGTH_SHORT).show()
-                    false
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                    true
                 }
                 else -> false
             }

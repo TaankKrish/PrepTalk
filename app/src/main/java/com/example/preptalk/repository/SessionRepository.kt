@@ -32,4 +32,8 @@ class SessionRepository(context: Context) {
     suspend fun getSessionById(id: Long): SessionEntity? {
         return sessionDao.getSessionById(id)
     }
+
+    suspend fun clearAllSessions() {
+        sessionDao.clearAllSessions()
+    }
 }

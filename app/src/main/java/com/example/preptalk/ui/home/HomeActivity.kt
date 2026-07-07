@@ -8,6 +8,7 @@ import com.example.preptalk.R
 import com.example.preptalk.databinding.ActivityHomeBinding
 import com.example.preptalk.ui.chat.ChatActivity
 import com.example.preptalk.ui.history.HistoryActivity
+import com.example.preptalk.ui.settings.SettingsActivity
 import com.google.android.material.card.MaterialCardView
 
 class HomeActivity : AppCompatActivity() {
@@ -106,8 +107,8 @@ class HomeActivity : AppCompatActivity() {
                     false
                 }
                 R.id.nav_settings -> {
-                    Toast.makeText(this, "Coming soon!", Toast.LENGTH_SHORT).show()
-                    false
+                    startActivity(Intent(this, SettingsActivity::class.java))
+                    true
                 }
                 else -> false
             }
