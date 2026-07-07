@@ -66,4 +66,14 @@ object PromptBuilder {
             70
         }
     }
+
+    fun extractFeedbackJson(response: String): String {
+        return try {
+            val jsonStart = response.indexOf("{")
+            val jsonEnd   = response.lastIndexOf("}") + 1
+            response.substring(jsonStart, jsonEnd)
+        } catch (e: Exception) {
+            "{}"
+        }
+    }
 }

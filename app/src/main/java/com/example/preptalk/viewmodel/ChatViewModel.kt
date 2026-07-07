@@ -15,23 +15,21 @@ class ChatViewModel : ViewModel() {
 
     private val repository = ChatRepository()
 
-    // Messages shown in the chat UI
     private val _messages = MutableLiveData<List<Message>>(emptyList())
     val messages: LiveData<List<Message>> = _messages
 
-    // Loading state — true when waiting for AI response
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
-    // Fired when session is complete with the score
     private val _sessionComplete = MutableLiveData<Int?>()
     val sessionComplete: LiveData<Int?> = _sessionComplete
 
-    // Error state
+    private val _sessionFeedbackJson = MutableLiveData<String>()
+    val sessionFeedbackJson: LiveData<String> = _sessionFeedbackJson
+
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> = _error
 
-    // Conversation history sent to Anthropic (alternating user/assistant turns)
     private val conversationHistory = mutableListOf<ApiMessage>()
 
     private var role       = "Android"
@@ -44,10 +42,8 @@ class ChatViewModel : ViewModel() {
     }
 
     fun sendUserMessage(userInput: String) {
-        // Add user message to UI
         addMessage(Message(content = userInput, role = MessageRole.USER))
 
-        // Add to conversation history for API
         conversationHistory.add(
             ApiMessage(role = "user", content = userInput)
         )
@@ -58,7 +54,6 @@ class ChatViewModel : ViewModel() {
     private fun sendToAi(isFirstMessage: Boolean = false) {
         _isLoading.value = true
 
-        // For first message, send a trigger to get the first question
         if (isFirstMessage) {
             conversationHistory.add(
                 ApiMessage(role = "user", content = "Start the interview. Ask me the first question.")
@@ -73,14 +68,14 @@ class ChatViewModel : ViewModel() {
             )
 
             result.onSuccess { responseText ->
-                // Add AI response to conversation history
                 conversationHistory.add(
                     ApiMessage(role = "assistant", content = responseText)
                 )
 
-                // Check if session is complete
                 if (PromptBuilder.isSessionComplete(responseText)) {
                     val score = PromptBuilder.extractScore(responseText)
+                    val feedbackJson = PromptBuilder.extractFeedbackJson(responseText)
+                    _sessionFeedbackJson.value = feedbackJson
                     _sessionComplete.value = score
                 } else {
                     addMessage(Message(content = responseText, role = MessageRole.AI))

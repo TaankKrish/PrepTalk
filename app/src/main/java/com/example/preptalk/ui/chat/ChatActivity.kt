@@ -2,14 +2,11 @@ package com.example.preptalk.ui.chat
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.preptalk.databinding.ActivityChatBinding
-import com.example.preptalk.model.Message
-import com.example.preptalk.model.MessageRole
 import com.example.preptalk.ui.summary.SummaryActivity
 import com.example.preptalk.viewmodel.ChatViewModel
 
@@ -39,7 +36,6 @@ class ChatActivity : AppCompatActivity() {
         setupEndSession()
         observeViewModel()
 
-        // Kick off the interview
         viewModel.init(role, difficulty)
     }
 
@@ -54,13 +50,11 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun observeViewModel() {
-        // Observe messages list
         viewModel.messages.observe(this) { messages ->
             chatAdapter.setMessages(messages)
             if (messages.isNotEmpty()) scrollToBottom()
         }
 
-        // Observe loading — show/hide typing bubble
         viewModel.isLoading.observe(this) { isLoading ->
             if (isLoading) {
                 chatAdapter.showTyping()
@@ -72,19 +66,18 @@ class ChatActivity : AppCompatActivity() {
             binding.etAnswer.isEnabled = !isLoading
         }
 
-        // Observe session complete
         viewModel.sessionComplete.observe(this) { score ->
             score?.let {
                 val intent = Intent(this, SummaryActivity::class.java)
-                intent.putExtra("ROLE",       role)
-                intent.putExtra("DIFFICULTY", difficulty)
-                intent.putExtra("SCORE",      it)
+                intent.putExtra("ROLE",          role)
+                intent.putExtra("DIFFICULTY",    difficulty)
+                intent.putExtra("SCORE",         it)
+                intent.putExtra("FEEDBACK_JSON", viewModel.sessionFeedbackJson.value ?: "{}")
                 startActivity(intent)
                 finish()
             }
         }
 
-        // Observe errors
         viewModel.error.observe(this) { error ->
             error?.let {
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
@@ -115,11 +108,6 @@ class ChatActivity : AppCompatActivity() {
 
     private fun setupEndSession() {
         binding.tvEndSession.setOnClickListener {
-            val intent = Intent(this, SummaryActivity::class.java)
-            intent.putExtra("ROLE",       role)
-            intent.putExtra("DIFFICULTY", difficulty)
-            intent.putExtra("SCORE",      50)
-            startActivity(intent)
             finish()
         }
     }

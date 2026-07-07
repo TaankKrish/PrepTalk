@@ -12,6 +12,7 @@ import com.example.preptalk.databinding.ActivitySummaryBinding
 import com.example.preptalk.repository.SessionRepository
 import com.example.preptalk.ui.home.HomeActivity
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,19 +56,26 @@ class SummaryActivity : AppCompatActivity() {
     }
 
     private fun setupFeedbackCards() {
-        // Placeholder feedback — will be replaced with real AI feedback parsing later
-        val feedbackItems = listOf(
-            FeedbackItem(
-                "Describe the Activity Lifecycle and how you manage state during a configuration change.",
-                "I usually use onSaveInstanceState to store primitives and ViewModel to handle more complex data during rotations...",
-                "Good technical knowledge. You could improve by mentioning the specific nuances of ViewModel persistence versus onSaveInstanceState size limits."
-            ),
-            FeedbackItem(
-                "What are the advantages of using Coroutines over traditional Threads for network calls?",
-                "Coroutines are lightweight and allow for non-blocking asynchronous code that is easier to read than callbacks.",
-                "Strong explanation of structured concurrency. Consider discussing the Main dispatcher and context switching for a more senior-level response."
+        val feedbackJsonRaw = intent.getStringExtra("FEEDBACK_JSON") ?: "{}"
+
+        val feedbackItems: List<FeedbackItem> = try {
+            val jsonObject = JsonParser.parseString(feedbackJsonRaw).asJsonObject
+            val feedbackArray = jsonObject.getAsJsonArray("feedback")
+            Gson().fromJson(feedbackArray, Array<FeedbackItem>::class.java).toList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        if (feedbackItems.isEmpty()) {
+            binding.layoutFeedbackCards.addView(
+                TextView(this).apply {
+                    text = "No detailed feedback available for this session."
+                    setTextColor(getColor(R.color.text_secondary))
+                    setPadding(0, 20, 0, 20)
+                }
             )
-        )
+            return
+        }
 
         feedbackItems.forEach { item ->
             val cardView = LayoutInflater.from(this)
@@ -96,16 +104,7 @@ class SummaryActivity : AppCompatActivity() {
     private fun saveSessionToDb(role: String, difficulty: String) {
         val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         val currentDate = dateFormat.format(Date())
-
-        // Convert feedback items to JSON for storage
-        val feedbackItems = listOf(
-            FeedbackItem(
-                "Describe the Activity Lifecycle and how you manage state during a configuration change.",
-                "I usually use onSaveInstanceState to store primitives and ViewModel to handle more complex data during rotations...",
-                "Good technical knowledge."
-            )
-        )
-        val feedbackJson = Gson().toJson(feedbackItems)
+        val feedbackJson = intent.getStringExtra("FEEDBACK_JSON") ?: "{}"
 
         lifecycleScope.launch {
             sessionRepository.saveSession(
